@@ -673,7 +673,7 @@ The Python sidecar extracts amounts through four sequential stages, stopping at 
 Three-layer duplicate detection runs on every non-duplicate image:
 
 | Layer | Method | Threshold | Speed |
-|-------|--------|-----------|-------|
+| ----- | ------ | --------- | ----- |
 | L1 | Exact SHA-256 hash match | Exact | < 5ms (database index) |
 | L2 | Perceptual hash (pHash) Hamming distance | ≤ 12 bits | < 10ms (in-memory) |
 | L3 | Jaccard similarity on OCR text trigrams | ≥ 0.85 | < 50ms |
@@ -770,7 +770,7 @@ The path is relative to the IIS site's physical path. If deployed to `C:\inetpub
 ## Technology Stack
 
 | Layer | Technology |
-|-------|-----------|
+| ----- | ---------- |
 | Public API | .NET 10 (C#), ASP.NET Core, Dapper |
 | OCR / AI Sidecar | Python 3.11, FastAPI, Uvicorn |
 | OCR Engines | Tesseract 5, EasyOCR 1.7 |
