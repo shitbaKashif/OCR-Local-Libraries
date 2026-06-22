@@ -47,7 +47,6 @@ SQL Server 2017+
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-
 | Windows Server / Windows 11 | — | IIS required |
 | IIS | 10+ | With ASP.NET Core Module v2 + HttpPlatformHandler |
 | .NET SDK | 10.0+ | For building the .NET API |
@@ -144,7 +143,7 @@ For local Docker testing, the DB is named `opd_attachments` (not `opd-media`). T
 
 ```powershell
 # Start SQL Server in Docker (SQL Server 2016 compatible)
-docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=Pass5432" `
+docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=YourPass" `
   -p 1433:1433 --name SQL_DB -d `
   mcr.microsoft.com/mssql/server:2017-latest
 
@@ -245,7 +244,7 @@ Register-ScheduledTask -TaskName "OPD Indexer" -Action $action -Trigger $trigger
 ```json
 {
   "ConnectionStrings": {
-    "OpdMedia": "Server=127.0.0.1,1433;Database=opd_attachments;User Id=sa;Password=Pass5432;TrustServerCertificate=True;MultipleActiveResultSets=True;Connect Timeout=30;Max Pool Size=100;"
+    "OpdMedia": "Server=127.0.0.1,1433;Database=opd_attachments;User Id=sa;Password=YourPass;TrustServerCertificate=True;MultipleActiveResultSets=True;Connect Timeout=30;Max Pool Size=100;"
   },
   "PythonSidecar": {
     "BaseUrl": "http://127.0.0.1:8001",
@@ -493,7 +492,6 @@ Content-Type: application/json
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-
 | `token` | string | Yes | Static API token (must match `JAZZ_API_TOKEN` env var) |
 | `amount_pkr` | decimal | Yes | Claimed amount in PKR (0.01 – 500,000) |
 | `image_base64` | string | Yes | Base64-encoded receipt image |
@@ -506,7 +504,6 @@ Content-Type: application/json
 
 | Field | Type | Description |
 |-------|------|-------------|
-
 | `AmountVerified` | bool | `true` if extracted amount matches claimed amount within ±1.00 PKR |
 | `ImageDup`       | bool | `true` if this image was previously submitted (duplicate claim) |
 
@@ -523,7 +520,6 @@ Content-Type: application/json
 
 | Status | Body | Cause |
 |--------|------|-------|
-
 | 400 | `{"error": "amount_pkr must be between 0.01 and 500000"}` | Amount out of range |
 | 400 | `{"error": "image_base64 is required"}` | Missing image |
 | 400 | `{"error": "Invalid base64 encoding"}` | Malformed base64 string |
@@ -678,7 +674,6 @@ Three-layer duplicate detection runs on every non-duplicate image:
 
 | Layer | Method | Threshold | Speed |
 |-------|--------|-----------|-------|
-
 | L1 | Exact SHA-256 hash match | Exact | < 5ms (database index) |
 | L2 | Perceptual hash (pHash) Hamming distance | ≤ 12 bits | < 10ms (in-memory) |
 | L3 | Jaccard similarity on OCR text trigrams | ≥ 0.85 | < 50ms |
@@ -775,7 +770,6 @@ The path is relative to the IIS site's physical path. If deployed to `C:\inetpub
 ## Technology Stack
 
 | Layer | Technology |
-
 |-------|-----------|
 | Public API | .NET 10 (C#), ASP.NET Core, Dapper |
 | OCR / AI Sidecar | Python 3.11, FastAPI, Uvicorn |
