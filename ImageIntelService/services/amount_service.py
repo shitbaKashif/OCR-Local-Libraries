@@ -32,6 +32,14 @@ BARE_AMOUNT_RE = re.compile(
     r'|\d{3,9}(?:\.\d{1,2})?)',                   # 3-9 digit integer or decimal
 )
 
+# Tesseract lines to skip in Stage B same-line matching.
+# These contain phone numbers, GST IDs, or date fields that look like amounts.
+_TESSERACT_NOISY_LINE = re.compile(
+    r'\bgst\s*no\b|\bmobile\b|\bph(?:one|\.?\s*no)\b'
+    r'|\bdue\s+da[lt]\w*\b|\binv\w*\s+date\b|\bd\.?l\.?\s*no\b',
+    re.IGNORECASE,
+)
+
 # Financial keywords — used to anchor bare-number extraction
 # Word boundaries prevent "net" matching inside "annex", "fee" inside "feel" etc.
 TOTAL_KEYWORDS = re.compile(
@@ -136,15 +144,17 @@ def stage_a_slash_notation(ocr_results: list[dict], img_height: int) -> Optional
 
 def stage_b_keyword_match(ocr_results: list[dict]) -> Optional[ExtractionResult]:
     """
-    Scan EasyOCR results for a financial keyword, then extract the nearest amount.
-    Checks: same line, next sequential line, same-row items (table right column).
-    Only EasyOCR results used — Tesseract layout is unreliable for spatial proximity.
+    Scan for a financial keyword then extract the nearest amount.
+
+    Pass 1 — EasyOCR: full spatial proximity (y_center is pixel-accurate).
+    Pass 2 — Tesseract: same-line and next-line only; spatial proximity skipped
+              because Tesseract y_centers are synthetic proportional estimates,
+              not actual pixel positions.
     """
     reliable = [r for r in ocr_results if r.get("source") != "tesseract"]
     for i, r in enumerate(reliable):
         if not TOTAL_KEYWORDS.search(r["text"]):
             continue
-
         probe_texts = [r["text"]]
         if i + 1 < len(reliable):
             probe_texts.append(reliable[i + 1]["text"])
@@ -152,11 +162,31 @@ def stage_b_keyword_match(ocr_results: list[dict]) -> Optional[ExtractionResult]
         for other in reliable:
             if other is not r and abs(other["y_center"] - kw_y) <= 30:
                 probe_texts.append(other["text"])
-
         for text in probe_texts:
             val = _extract_from_text(text)
             if val:
                 return ExtractionResult(val, 'keyword_match')
+
+    # Tesseract pass — fires when EasyOCR was skipped (Tesseract got ≥50 chars).
+    # Same-line: only 30 chars after keyword end (amount must be adjacent; phone/GST
+    #            numbers buried in long lines are ignored).
+    # Same-line: skip lines containing phone/GST/date metadata (noisy false-positives).
+    # Next-line: full extraction (single-value lines after a keyword header are clean).
+    tesseract = [r for r in ocr_results if r.get("source") == "tesseract"]
+    for i, r in enumerate(tesseract):
+        kw_match = TOTAL_KEYWORDS.search(r["text"])
+        if not kw_match:
+            continue
+        if not _TESSERACT_NOISY_LINE.search(r["text"]):
+            suffix = r["text"][kw_match.end():][:30]
+            val = _extract_from_text(suffix)
+            if val:
+                return ExtractionResult(val, 'keyword_match')
+        if i + 1 < len(tesseract):
+            val = _extract_from_text(tesseract[i + 1]["text"])
+            if val:
+                return ExtractionResult(val, 'keyword_match')
+
     return None
 
 
